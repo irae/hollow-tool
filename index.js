@@ -1,13 +1,21 @@
 
-const {homedir} = require('os');
+const {homedir, platform} = require('os');
 const {join} = require('path');
 const ioHook = require('iohook');
 const {Socket} = require('net');
 const {existsSync, readdir, unlinkSync} = require('fs');
+const { spawnSync } = require('child_process');
 
-const hollowSaves = join(homedir(), 'AppData','LocalLow', 'Team Cherry', 'Hollow Knight');
+const hollowSavesWin = join(homedir(), 'AppData','LocalLow', 'Team Cherry', 'Hollow Knight');
+const hollowSavesWSL = join(process.env.WSL_HOMEDIR || '', 'AppData','LocalLow', 'Team Cherry', 'Hollow Knight');
 
-if (!existsSync(hollowSaves)) {
+let hollowSaves = false;
+
+if (existsSync(hollowSavesWin)) {
+	hollowSaves = hollowSavesWin;
+} else if (existsSync(hollowSavesWSL)){
+	hollowSaves = hollowSavesWSL;
+} else {
 	console.error("Can't find saves!");
 	process.exit(1);
 }
@@ -22,6 +30,15 @@ const eraseSaves = () => {
 				console.log('deleted:', f);
 			});
 	});
+};
+
+const gitZero = () => {
+	console.log('git zero');
+	if (platform() === 'win32') {
+		spawnSync("C:\\Windows\\System32\\wsl.exe", ['git', 'zero'], { cwd: hollowSaves, stdio: 'inherit' });
+	} else {
+		spawnSync("git", ['zero'], { cwd: hollowSaves, stdio: 'inherit' });
+	}
 };
 
 const livesplit = Socket();
@@ -42,7 +59,7 @@ ioHook.on('keyup', event => {
 	if (event.rawcode !== 35) return;
 	console.log('reset pressed');
 	tellLivesplit('reset');
-	eraseSaves();
+	gitZero();
 });
 ioHook.start();
 
